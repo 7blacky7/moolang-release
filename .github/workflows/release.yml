@@ -1,0 +1,137 @@
+name: Release Build
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  MOO_SRC_REPO: blacky-dev/moo  # TODO: anpassen sobald Source-Repo oeffentlich
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: release-repo }
+      - name: Checkout moo source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.MOO_SRC_REPO }}
+          path: moo
+          token: ${{ secrets.MOO_SRC_TOKEN }}
+      - name: System deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y llvm-18-dev libsdl2-dev libsdl2-image-dev libglfw3-dev libgl1-mesa-dev libvulkan-dev libcurl4-openssl-dev libsqlite3-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build bundle
+        env:
+          MOO_SRC: ${{ github.workspace }}/moo
+          LLVM_SYS_181_PREFIX: /usr/lib/llvm-18
+        run: |
+          chmod +x release-repo/scripts/build-release.sh
+          release-repo/scripts/build-release.sh ${GITHUB_REF_NAME#v}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: release-repo/dist/*.tar.gz*
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: release-repo }
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.MOO_SRC_REPO }}
+          path: moo
+          token: ${{ secrets.MOO_SRC_TOKEN }}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install LLVM
+        run: choco install llvm --version=18.1.8 -y
+      - name: Install vcpkg deps
+        run: |
+          vcpkg install sdl2:x64-windows sdl2-image:x64-windows glfw3:x64-windows curl:x64-windows sqlite3:x64-windows
+      - name: Build compiler
+        shell: bash
+        env:
+          LIBCLANG_PATH: C:\Program Files\LLVM\bin
+          VCPKG_ROOT: C:\vcpkg
+        run: |
+          cd moo/compiler
+          cargo build --release --features gl33
+      - name: Stage bundle
+        shell: bash
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          NAME="moolang-$VER-windows-x64"
+          mkdir -p "release-repo/dist/$NAME/beispiele" "release-repo/dist/$NAME/stdlib" "release-repo/dist/$NAME/lib"
+          cp moo/compiler/target/release/moo-compiler.exe "release-repo/dist/$NAME/moo.exe"
+          cp moo/stdlib/*.moo "release-repo/dist/$NAME/stdlib/" || true
+          cp moo/beispiele/welten.moo "release-repo/dist/$NAME/beispiele/"
+          cp release-repo/bundle-src/START_HIER.txt "release-repo/dist/$NAME/"
+          cp release-repo/bundle-src/install.bat "release-repo/dist/$NAME/"
+          cp release-repo/README.md "release-repo/dist/$NAME/"
+          # Bundle required DLLs
+          cp C:/vcpkg/installed/x64-windows/bin/*.dll "release-repo/dist/$NAME/lib/" || true
+          cd release-repo/dist && 7z a "$NAME.zip" "$NAME"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: release-repo/dist/*.zip
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: release-repo }
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.MOO_SRC_REPO }}
+          path: moo
+          token: ${{ secrets.MOO_SRC_TOKEN }}
+      - uses: dtolnay/rust-toolchain@stable
+      - name: System deps
+        run: |
+          brew install llvm@18 sdl2 sdl2_image glfw curl sqlite
+      - name: Build bundle
+        env:
+          MOO_SRC: ${{ github.workspace }}/moo
+          LLVM_SYS_181_PREFIX: /opt/homebrew/opt/llvm@18
+        run: |
+          chmod +x release-repo/scripts/build-release.sh
+          # Linux-Script anpassen: Archivname auf macos
+          VER="${GITHUB_REF_NAME#v}"
+          cd moo/compiler && cargo build --release --features gl33 && cd -
+          NAME="moolang-$VER-macos"
+          mkdir -p "release-repo/dist/$NAME/beispiele" "release-repo/dist/$NAME/stdlib"
+          cp moo/compiler/target/release/moo-compiler "release-repo/dist/$NAME/moo"
+          chmod +x "release-repo/dist/$NAME/moo"
+          cp moo/stdlib/*.moo "release-repo/dist/$NAME/stdlib/" || true
+          cp moo/beispiele/welten.moo "release-repo/dist/$NAME/beispiele/"
+          cp release-repo/bundle-src/START_HIER.txt release-repo/bundle-src/install.sh "release-repo/dist/$NAME/"
+          chmod +x "release-repo/dist/$NAME/install.sh"
+          cp release-repo/README.md "release-repo/dist/$NAME/"
+          cd release-repo/dist && tar -czf "$NAME.tar.gz" "$NAME"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: release-repo/dist/*.tar.gz
+
+  release:
+    needs: [linux, windows, macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts }
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          draft: true
+          prerelease: true
+          name: moolang ${{ github.ref_name }}
+          body: |
+            Alpha-Release. Name und Dateiendung sind nicht final.
+            Verifizierter Beispielumfang: welten.moo (3D-Welt).

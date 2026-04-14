@@ -1,0 +1,21 @@
+moolang — Alpha
+================
+
+1. Erst einmalig:  ./install.sh      (Linux/macOS)  bzw.  install.bat  (Windows)
+   → installiert nötige System-Bibliotheken (SDL2, GLFW, OpenGL etc.)
+
+2. 3D-Welt starten:  ./moo run beispiele/welten.moo
+
+3. Eigenen Code:     ./moo run deine_datei.moo
+   REPL:             ./moo repl
+
+Steuerung in welten.moo:
+  WASD  - Bewegen
+  Maus  - Umsehen
+  Space - Springen
+  Esc   - Beenden
+
+Sprache: Deutsch (setze, solange, wenn, funktion, gib_zurück, zeige ...)
+Alias in Englisch funktioniert ebenfalls.
+
+Diese Version ist ein ALPHA. Name + Endung sind noch nicht final.

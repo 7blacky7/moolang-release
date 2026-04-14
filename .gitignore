@@ -1,0 +1,7 @@
+dist/
+target/
+*.tar.gz
+*.zip
+*.sha256
+.synapse/
+.claude/
