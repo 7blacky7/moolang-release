@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  MOO_SRC_REPO: blacky-dev/moo  # TODO: anpassen sobald Source-Repo oeffentlich
+  MOO_SRC_REPO: 7blacky7/moo
 
 jobs:
   linux:
@@ -19,7 +19,6 @@ jobs:
         with:
           repository: ${{ env.MOO_SRC_REPO }}
           path: moo
-          token: ${{ secrets.MOO_SRC_TOKEN }}
       - name: System deps
         run: |
           sudo apt-get update
@@ -46,7 +45,6 @@ jobs:
         with:
           repository: ${{ env.MOO_SRC_REPO }}
           path: moo
-          token: ${{ secrets.MOO_SRC_TOKEN }}
       - uses: dtolnay/rust-toolchain@stable
       - name: Install LLVM
         run: choco install llvm --version=18.1.8 -y
@@ -90,7 +88,6 @@ jobs:
         with:
           repository: ${{ env.MOO_SRC_REPO }}
           path: moo
-          token: ${{ secrets.MOO_SRC_TOKEN }}
       - uses: dtolnay/rust-toolchain@stable
       - name: System deps
         run: |
