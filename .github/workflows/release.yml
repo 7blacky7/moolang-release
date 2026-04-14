@@ -22,7 +22,7 @@ jobs:
       - name: System deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y llvm-18-dev libsdl2-dev libsdl2-image-dev libglfw3-dev libgl1-mesa-dev libvulkan-dev libcurl4-openssl-dev libsqlite3-dev
+          sudo apt-get install -y llvm-18-dev libpolly-18-dev libsdl2-dev libsdl2-image-dev libglfw3-dev libgl1-mesa-dev libvulkan-dev libcurl4-openssl-dev libsqlite3-dev
       - uses: dtolnay/rust-toolchain@stable
       - name: Build bundle
         env:
@@ -37,6 +37,7 @@ jobs:
           path: release-repo/dist/*.tar.gz*
 
   windows:
+    if: false  # Alpha: Windows-Build erstmal deaktiviert (LLVM + build.rs Cross-Platform-Fixes ausstehend)
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -80,6 +81,7 @@ jobs:
           path: release-repo/dist/*.zip
 
   macos:
+    if: false  # Alpha: macOS-Build erstmal deaktiviert (build.rs hat /usr/include/SDL2 hardcoded)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -117,7 +119,7 @@ jobs:
           path: release-repo/dist/*.tar.gz
 
   release:
-    needs: [linux, windows, macos]
+    needs: [linux]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
